@@ -3,7 +3,7 @@ services:
 
   thumbor:
     #image: apsl/thumbor-multiprocess:latest
-    build: thumbor-multiprocess
+    build: .
     restart: always
     container_name: thumbor
     volumes:
