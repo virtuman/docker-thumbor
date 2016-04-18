@@ -1,0 +1,78 @@
+version: '2'
+services:
+
+  thumbor:
+    #image: apsl/thumbor-multiprocess:latest
+    build: thumbor-multiprocess
+    restart: always
+    container_name: thumbor
+    volumes:
+      - /srv/thumbor/data:/data
+      - /home/cloud/www:/cloud
+      - /srv/thumbor/logs:/logs
+  #  ports:
+  #    - "89:8000" # thumbor port
+    environment:
+      MAX_WIDTH: 2500
+      MAX_HEIGHT: 2500
+      LOADER: thumbor.loaders.virtuman_mixed_loader
+#     LOADER: thumbor.loaders.http_loader
+      RESULT_STORAGE: thumbor.result_storages.virtuman_file_storage
+#     RESULT_STORAGE: thumbor.result_storages.file_storage
+      FILE_LOADER_ROOT_PATH: /cloud/autoauctionmall.com/production/images
+      RESULT_STORAGE_FILE_STORAGE_ROOT_PATH: /data/result_storage
+      #ERROR_FILE_LOGGER: /logs/errors.log
+
+      ALLOW_UNSAFE_URL: "True"
+      QUALITY: 85
+      WEBP_QUALITY: 90
+      MAX_AGE: 24 * 60 * 60 * 14
+      MAX_AGE_TEMP_IMAGE: 30
+      STORAGE: 'thumbor.storages.file_storage'
+      SECURITY_KEY: sA3MPLEsecuRE
+      HTTP_LOADER_MAX_CLIENTS: 50
+      HTTP_LOADER_DEFAULT_USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0'
+      UPLOAD_ENABLED: "True"
+      MIXED_STORAGE_FILE_STORAGE: thumbor.storages.file_storage
+      MIXED_STORAGE_DETECTOR_STORAGE: 'thumbor.storages.redis_storage'
+      OPTIMIZERS: "['thumbor.optimizers.jpegtran',]"
+      RESULT_STORAGE_STORES_UNSAFE: "True"
+
+#     DETECTORS: "['thumbor.detectors.face_detector', 'thumbor.detectors.queued_detector.queued_complete_detector',]"
+      DETECTORS: "['thumbor.detectors.queued_detector.queued_complete_detector',]"
+      REDIS_STORAGE_SERVER_HOST: redis
+      REDIS_STORAGE_SERVER_PORT: 6379
+      REDIS_STORAGE_SERVER_DB: 0
+      REDIS_QUEUE_SERVER_HOST: redis
+      REDIS_QUEUE_SERVER_PORT: 6379
+      REDIS_QUEUE_SERVER_DB: 0
+      SENTRY_DSN_URL: # put your sentry enpoint here
+      THUMBOR_NUM_PROCESSES: 8
+    links:
+      - redis:redis
+  nginx:
+    image: apsl/thumbor-nginx:latest
+    restart: always
+    container_name: thumbor_nginx
+    links:
+      - thumbor:thumbor
+    volumes_from:
+      - thumbor
+    ports:
+      - "8000:80" # nginx cache port (with failover to thumbor)
+    hostname: nginx
+  remotecv:
+    container_name: thumbor_remotecv
+    image: apsl/remotecv
+    restart: always
+    links:
+      - redis:redis
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DATABASE: 0
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: always
+
